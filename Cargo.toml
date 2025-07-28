@@ -1,0 +1,11 @@
+[package]
+name = "async-event-rs"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+futures = "0.3.31"
+slab = "0.4.10"
+
+[dev-dependencies]
+tokio = { version = "1.47.0", features = ["macros", "rt"] }
