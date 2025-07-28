@@ -2,6 +2,11 @@
 name = "async-event-rs"
 version = "0.1.0"
 edition = "2024"
+description = "Rust implementation that mimics C#'s async event model"
+repository = "https://github.com/fxdmhtt/async-event-rs"
+license = "GPL-2.0"
+keywords = ["async", "event"]
+categories = ["asynchronous"]
 
 [dependencies]
 futures = "0.3.31"
