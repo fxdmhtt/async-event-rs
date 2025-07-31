@@ -27,7 +27,7 @@ pub type AsyncEventHandler<'a, TEventArgs> = Box<dyn Fn(TEventArgs) -> LocalBoxF
 /// # futures::executor::block_on(async {
 /// let mut event = AsyncEvent::<EventArgs>::new();
 /// event.add(|args| async move {
-///     println!("Event triggered with args: {:?}", args);
+///     println!("Event invoked with args: {:?}", args);
 ///     assert_eq!(args, EventArgs {id: 0, message: ""});
 /// });
 ///
@@ -64,7 +64,7 @@ impl<'a, TEventArgs> AsyncEvent<'a, TEventArgs> {
     /// Adds an event handler to the event.
     ///
     /// The handler should be a closure that accepts a reference to the event arguments
-    /// and returns a future. The future will be executed when the event is triggered.
+    /// and returns a future. The future will be executed when the event is invoked.
     ///
     /// Returns a handle that can be used to remove the handler later.
     ///
@@ -76,7 +76,7 @@ impl<'a, TEventArgs> AsyncEvent<'a, TEventArgs> {
     /// # futures::executor::block_on(async {
     /// let mut event = AsyncEvent::<()>::new();
     /// let handle = event.add(|args| async move {
-    ///     println!("Event triggered");
+    ///     println!("Event invoked");
     /// });
     /// # });
     /// ```
@@ -101,7 +101,7 @@ impl<'a, TEventArgs> AsyncEvent<'a, TEventArgs> {
     /// # futures::executor::block_on(async {
     /// let mut event = AsyncEvent::<()>::new();
     /// let handle = event.add(|args| async move {
-    ///     println!("Event triggered");
+    ///     println!("Event invoked");
     /// });
     ///
     /// assert!(event.remove(handle));
@@ -214,7 +214,8 @@ mod tests {
         });
 
         event.invoke_async(()).await;
-        assert_eq!(*counter.borrow(), 2);
+        event.invoke_async(()).await;
+        assert_eq!(*counter.borrow(), 4);
     }
 
     #[tokio::test]
