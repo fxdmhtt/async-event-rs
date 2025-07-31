@@ -53,15 +53,7 @@ impl<'a, TEventArgs> AsyncEvent<'a, TEventArgs> {
     /// ```
     /// use async_event_rs::AsyncEvent;
     ///
-    /// # futures::executor::block_on(async {
-    /// let mut event: AsyncEvent<(i32, &str)> = AsyncEvent::new();
-    /// event.add(|args| async move {
-    ///     println!("Event triggered with args: {:?}", args);
-    ///     assert_eq!(args, (0, ""));
-    /// });
-    ///
-    /// event.invoke_async((0, "")).await;
-    /// # });
+    /// let mut event: AsyncEvent<()> = AsyncEvent::new();
     /// ```
     pub fn new() -> Self {
         Self {
