@@ -1,5 +1,5 @@
 use futures::future::{FutureExt, JoinAll, LocalBoxFuture, join_all};
-use std::{cell::RefCell, future::Future};
+use std::{cell::RefCell, future::Future, rc::Rc};
 
 use slab::Slab;
 
@@ -7,7 +7,7 @@ use slab::Slab;
 ///
 /// This represents a boxed function that takes a reference to event arguments
 /// and returns a boxed local future that resolves to ().
-pub type AsyncEventHandler<'a, TEventArgs> = Box<dyn Fn(TEventArgs) -> LocalBoxFuture<'a, ()> + 'a>;
+pub type AsyncEventHandler<'a, TEventArgs> = Rc<dyn Fn(TEventArgs) -> LocalBoxFuture<'a, ()> + 'a>;
 
 /// An asynchronous event that can have multiple handlers attached to it.
 ///
@@ -88,7 +88,7 @@ impl<'a, TEventArgs> AsyncEvent<'a, TEventArgs> {
     {
         self.handlers
             .borrow_mut()
-            .insert(Box::new(move |arg| handler(arg).boxed_local()))
+            .insert(Rc::new(move |arg| handler(arg).boxed_local()))
     }
 
     /// Removes an event handler using its handle.
@@ -154,7 +154,14 @@ impl<'a, TEventArgs> AsyncEvent<'a, TEventArgs> {
     where
         TEventArgs: Clone,
     {
-        for (_, handler) in self.handlers.borrow().iter() {
+        let handlers: Vec<AsyncEventHandler<'a, TEventArgs>> = self
+            .handlers
+            .borrow()
+            .iter()
+            .map(|(_, handler)| Rc::clone(handler))
+            .collect();
+
+        for handler in handlers {
             handler(arg.clone()).await;
         }
     }
@@ -184,7 +191,8 @@ impl<'a, TEventArgs> AsyncEvent<'a, TEventArgs> {
             self.handlers
                 .borrow()
                 .iter()
-                .map(|(_, handler)| handler(arg.clone())),
+                .map(|(_, handler)| handler(arg.clone()))
+                .collect::<Vec<_>>(),
         )
     }
 }
