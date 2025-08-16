@@ -1,6 +1,7 @@
 use futures::future::{FutureExt, JoinAll, LocalBoxFuture, join_all};
+use std::{cell::RefCell, future::Future};
+
 use slab::Slab;
-use std::future::Future;
 
 /// Type alias for asynchronous event handlers.
 ///
@@ -25,7 +26,7 @@ pub type AsyncEventHandler<'a, TEventArgs> = Box<dyn Fn(TEventArgs) -> LocalBoxF
 /// }
 ///
 /// # futures::executor::block_on(async {
-/// let mut event = AsyncEvent::<EventArgs>::new();
+/// let event = AsyncEvent::<EventArgs>::new();
 /// event.add(|args| async move {
 ///     println!("Event invoked with args: {:?}", args);
 ///     assert_eq!(args, EventArgs {id: 0, message: ""});
@@ -36,7 +37,7 @@ pub type AsyncEventHandler<'a, TEventArgs> = Box<dyn Fn(TEventArgs) -> LocalBoxF
 /// # });
 /// ```
 pub struct AsyncEvent<'a, TEventArgs> {
-    handlers: Slab<AsyncEventHandler<'a, TEventArgs>>,
+    handlers: RefCell<Slab<AsyncEventHandler<'a, TEventArgs>>>,
 }
 
 impl<'a, TEventArgs> Default for AsyncEvent<'a, TEventArgs> {
@@ -53,11 +54,11 @@ impl<'a, TEventArgs> AsyncEvent<'a, TEventArgs> {
     /// ```
     /// use async_event_rs::AsyncEvent;
     ///
-    /// let mut event: AsyncEvent<()> = AsyncEvent::new();
+    /// let event: AsyncEvent<()> = AsyncEvent::new();
     /// ```
     pub fn new() -> Self {
         Self {
-            handlers: Slab::new(),
+            handlers: Slab::new().into(),
         }
     }
 
@@ -74,18 +75,19 @@ impl<'a, TEventArgs> AsyncEvent<'a, TEventArgs> {
     /// use async_event_rs::AsyncEvent;
     ///
     /// # futures::executor::block_on(async {
-    /// let mut event = AsyncEvent::<()>::new();
+    /// let event = AsyncEvent::<()>::new();
     /// let handle = event.add(|args| async move {
     ///     println!("Event invoked");
     /// });
     /// # });
     /// ```
-    pub fn add<F, Fut>(&mut self, handler: F) -> usize
+    pub fn add<F, Fut>(&self, handler: F) -> usize
     where
         F: Fn(TEventArgs) -> Fut + 'a,
         Fut: Future<Output = ()> + 'a,
     {
         self.handlers
+            .borrow_mut()
             .insert(Box::new(move |arg| handler(arg).boxed_local()))
     }
 
@@ -99,7 +101,7 @@ impl<'a, TEventArgs> AsyncEvent<'a, TEventArgs> {
     /// use async_event_rs::AsyncEvent;
     ///
     /// # futures::executor::block_on(async {
-    /// let mut event = AsyncEvent::<()>::new();
+    /// let event = AsyncEvent::<()>::new();
     /// let handle = event.add(|args| async move {
     ///     println!("Event invoked");
     /// });
@@ -108,8 +110,8 @@ impl<'a, TEventArgs> AsyncEvent<'a, TEventArgs> {
     /// assert!(!event.remove(handle)); // Already removed
     /// # });
     /// ```
-    pub fn remove(&mut self, handle: usize) -> bool {
-        self.handlers.try_remove(handle).is_some()
+    pub fn remove(&self, handle: usize) -> bool {
+        self.handlers.borrow_mut().try_remove(handle).is_some()
     }
 
     /// Removes all event handlers.
@@ -120,15 +122,15 @@ impl<'a, TEventArgs> AsyncEvent<'a, TEventArgs> {
     /// use async_event_rs::AsyncEvent;
     ///
     /// # futures::executor::block_on(async {
-    /// let mut event = AsyncEvent::<()>::new();
+    /// let event = AsyncEvent::<()>::new();
     /// event.add(|args| async move { println!("Handler 1"); });
     /// event.add(|args| async move { println!("Handler 2"); });
     ///
     /// event.clear(); // Remove all handlers
     /// # });
     /// ```
-    pub fn clear(&mut self) {
-        self.handlers.clear();
+    pub fn clear(&self) {
+        self.handlers.borrow_mut().clear();
     }
 
     /// Invokes all event handlers sequentially (one after another).
@@ -141,7 +143,7 @@ impl<'a, TEventArgs> AsyncEvent<'a, TEventArgs> {
     /// use async_event_rs::AsyncEvent;
     ///
     /// # futures::executor::block_on(async {
-    /// let mut event = AsyncEvent::new();
+    /// let event = AsyncEvent::new();
     /// event.add(|args| async move { println!("Handler 1"); });
     /// event.add(|args| async move { println!("Handler 2"); });
     ///
@@ -152,7 +154,7 @@ impl<'a, TEventArgs> AsyncEvent<'a, TEventArgs> {
     where
         TEventArgs: Clone,
     {
-        for (_, handler) in self.handlers.iter() {
+        for (_, handler) in self.handlers.borrow().iter() {
             handler(arg.clone()).await;
         }
     }
@@ -167,7 +169,7 @@ impl<'a, TEventArgs> AsyncEvent<'a, TEventArgs> {
     /// use async_event_rs::AsyncEvent;
     ///
     /// # futures::executor::block_on(async {
-    /// let mut event = AsyncEvent::new();
+    /// let event = AsyncEvent::new();
     /// event.add(|args| async move { println!("Handler 1"); });
     /// event.add(|args| async move { println!("Handler 2"); });
     ///
@@ -180,6 +182,7 @@ impl<'a, TEventArgs> AsyncEvent<'a, TEventArgs> {
     {
         join_all(
             self.handlers
+                .borrow()
                 .iter()
                 .map(|(_, handler)| handler(arg.clone())),
         )
@@ -188,14 +191,15 @@ impl<'a, TEventArgs> AsyncEvent<'a, TEventArgs> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::cell::RefCell;
     use std::rc::Rc;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_invoke_async() {
         let counter = Rc::new(RefCell::new(0));
-        let mut event = AsyncEvent::new();
+        let event = AsyncEvent::new();
 
         event.invoke_async(()).await;
 
@@ -221,7 +225,7 @@ mod tests {
     #[tokio::test]
     async fn test_invoke_parallel_async() {
         let log = Rc::new(RefCell::new(vec![]));
-        let mut event = AsyncEvent::new();
+        let event = AsyncEvent::new();
 
         event.invoke_parallel_async(()).await;
 
@@ -247,7 +251,7 @@ mod tests {
     #[tokio::test]
     async fn test_remove_handler() {
         let counter = Rc::new(RefCell::new(0));
-        let mut event = AsyncEvent::new();
+        let event = AsyncEvent::new();
 
         let handle = event.add(|_| {
             let counter = Rc::clone(&counter);
@@ -265,7 +269,7 @@ mod tests {
     #[tokio::test]
     async fn test_clear_handlers() {
         let counter = Rc::new(RefCell::new(0));
-        let mut event = AsyncEvent::new();
+        let event = AsyncEvent::new();
 
         for _ in 0..5 {
             event.add(|_| {
@@ -285,7 +289,7 @@ mod tests {
     #[tokio::test]
     async fn test_add_handler_twice() {
         let counter = Rc::new(RefCell::new(0));
-        let mut event = AsyncEvent::new();
+        let event = AsyncEvent::new();
 
         let handler = |_| {
             let counter: Rc<RefCell<i32>> = Rc::clone(&counter);
@@ -304,7 +308,7 @@ mod tests {
     #[tokio::test]
     async fn test_remove_handler_twice() {
         let counter = Rc::new(RefCell::new(0));
-        let mut event = AsyncEvent::new();
+        let event = AsyncEvent::new();
 
         let handle = event.add(|_| {
             let counter: Rc<RefCell<i32>> = Rc::clone(&counter);

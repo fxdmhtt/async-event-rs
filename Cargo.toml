@@ -1,16 +1,6 @@
-[package]
-name = "async-event-rs"
-version = "0.2.2"
-edition = "2024"
-description = "Rust implementation that mimics C#'s async event model"
-repository = "https://github.com/fxdmhtt/async-event-rs"
-license = "GPL-2.0"
-keywords = ["async", "event"]
-categories = ["asynchronous"]
-
-[dependencies]
-futures = "0.3.31"
-slab = "0.4.10"
-
-[dev-dependencies]
-tokio = { version = "1.47.0", features = ["macros", "rt"] }
+[workspace]
+resolver = "3"
+members = [
+    "async-event",
+    "event",
+]

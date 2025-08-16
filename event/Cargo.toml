@@ -1,0 +1,12 @@
+[package]
+name = "event-rs"
+version = "0.2.0"
+edition = "2024"
+description = "Rust implementation that mimics C#'s event model"
+repository = "https://github.com/fxdmhtt/event-rs"
+license = "GPL-2.0"
+keywords = ["event"]
+categories = []
+
+[dependencies]
+slab = "0.4.10"

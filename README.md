@@ -1,2 +1,2 @@
-# async-event-rs
-Rust implementation that mimics C#'s async event model
+# event-rs
+Rust implementation that mimics C#'s event model
