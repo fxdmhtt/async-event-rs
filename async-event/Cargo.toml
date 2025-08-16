@@ -1,6 +1,6 @@
 [package]
 name = "async-event-rs"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2024"
 description = "Rust implementation that mimics C#'s async event model"
 repository = "https://github.com/fxdmhtt/event-rs"

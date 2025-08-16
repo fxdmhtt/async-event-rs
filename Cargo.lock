@@ -19,7 +19,7 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 
 [[package]]
 name = "async-event-rs"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "futures",
  "slab",
@@ -55,7 +55,7 @@ checksum = "9555578bc9e57714c812a1f84e4fc5b4d21fcb063490c624de019f7464c91268"
 
 [[package]]
 name = "event-rs"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "slab",
 ]
