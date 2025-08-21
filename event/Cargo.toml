@@ -2,6 +2,7 @@
 name = "event-rs"
 version = "0.3.2"
 edition = "2024"
+authors = ["Junkang Yuan <yuanjunkang@gmail.com>"]
 description = "Rust implementation that mimics C#'s event model"
 repository = "https://github.com/fxdmhtt/event-rs"
 license = "GPL-2.0"
